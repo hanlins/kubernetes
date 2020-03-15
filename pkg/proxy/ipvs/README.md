@@ -349,7 +349,7 @@ Note that in Kubernetes 1.11 and later, `SupportIPVSProxyMode` is set to `true` 
 
 before running
 
-`kube init --config <path_to_configuration_file>`
+`kubeadm init --config <path_to_configuration_file>`
 
 If you are using Kubernetes v1.8, you can also add the flag `--feature-gates=SupportIPVSProxyMode=true` (deprecated since v1.9) in `kubeadm init` command
 
