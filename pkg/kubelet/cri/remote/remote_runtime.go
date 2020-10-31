@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 	"k8s.io/klog/v2"
 
 	"k8s.io/component-base/logs/logreduction"
@@ -56,6 +58,7 @@ func NewRemoteRuntimeService(endpoint string, connectionTimeout time.Duration) (
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 
+	grpclog.Warningf("!!! NewRemoteRuntimeService Dialer: '%#v'", reflect.ValueOf(dialer))
 	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithContextDialer(dialer), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
 	if err != nil {
 		klog.Errorf("Connect remote runtime %s failed: %v", addr, err)

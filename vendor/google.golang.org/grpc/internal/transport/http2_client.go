@@ -24,6 +24,8 @@ import (
 	"io"
 	"math"
 	"net"
+	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +37,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal"
 	"google.golang.org/grpc/internal/channelz"
 	"google.golang.org/grpc/internal/syscall"
@@ -137,7 +140,10 @@ type http2Client struct {
 
 func dial(ctx context.Context, fn func(context.Context, string) (net.Conn, error), addr string) (net.Conn, error) {
 	if fn != nil {
-		return fn(ctx, addr)
+		// return fn(ctx, addr)
+		grpclog.Warningf("#! grpc: OVERWRITE dial addr: '%s', given fn: '%#v'", addr, reflect.ValueOf(fn))
+		grpclog.Warningf("#! grpc: Stack:\n'%s'", string(debug.Stack()))
+		return (&net.Dialer{}).DialContext(ctx, "unix", addr)
 	}
 	return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
 }

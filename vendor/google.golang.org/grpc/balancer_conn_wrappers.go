@@ -20,6 +20,7 @@ package grpc
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"google.golang.org/grpc/balancer"
@@ -253,7 +254,9 @@ func (acbw *acBalancerWrapper) UpdateAddresses(addrs []resolver.Address) {
 		ac.acbw = acbw
 		ac.mu.Unlock()
 		if acState != connectivity.Idle {
+			grpclog.Warningf("#~ grpc: acBalancerWrapper.getReadyTransport stack trace:\n", string(debug.Stack()))
 			ac.connect()
+			grpclog.Warningf("#~ grpc: acBalancerWrapper.getReadyTransport ends, ac: '%#v'", *ac)
 		}
 	}
 }
@@ -261,7 +264,9 @@ func (acbw *acBalancerWrapper) UpdateAddresses(addrs []resolver.Address) {
 func (acbw *acBalancerWrapper) Connect() {
 	acbw.mu.Lock()
 	defer acbw.mu.Unlock()
+	grpclog.Warningf("#! grpc: acBalancerWrapper.Connect stack trace:\n", string(debug.Stack()))
 	acbw.ac.connect()
+	grpclog.Warningf("#! grpc: acBalancerWrapper.Connect ends, acbw: '%#v'", *acbw)
 }
 
 func (acbw *acBalancerWrapper) getAddrConn() *addrConn {

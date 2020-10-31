@@ -20,6 +20,9 @@ package grpc
 
 import (
 	"context"
+	"reflect"
+
+	"google.golang.org/grpc/grpclog"
 )
 
 // Invoke sends the RPC request on the wire and returns after response is
@@ -34,7 +37,14 @@ func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply int
 	if cc.dopts.unaryInt != nil {
 		return cc.dopts.unaryInt(ctx, method, args, reply, cc, invoke, opts...)
 	}
-	return invoke(ctx, method, args, reply, cc, opts...)
+	grpclog.Warningf("!!! Invoke dialier: '%#v'", reflect.ValueOf(cc.dopts.copts.Dialer))
+	err := invoke(ctx, method, args, reply, cc, opts...)
+	if err != nil {
+		grpclog.Warningf("** Invoke: '%s', err: %#v", method, err)
+	} else {
+		grpclog.Warningf("** Invoke: '%s', NO ERROR", method)
+	}
+	return err
 }
 
 func combine(o1 []CallOption, o2 []CallOption) []CallOption {

@@ -25,6 +25,7 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -203,6 +204,7 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 				return (&net.Dialer{}).DialContext(ctx, network, addr)
 			},
 		)
+		grpclog.Warningf("!!! DialContext Overwrite Dialer: '%#v'", reflect.ValueOf(cc.dopts.copts.Dialer))
 	}
 
 	if cc.dopts.copts.UserAgent != "" {
@@ -1200,8 +1202,10 @@ func (ac *addrConn) tryAllAddrs(addrs []resolver.Address, connectDeadline time.T
 		ac.mu.Lock()
 		if ac.state == connectivity.Shutdown {
 			ac.mu.Unlock()
+			grpclog.Warningf("## grpc: addrConn.tryAllAddrs connectivity SHUTDOWN return")
 			return nil, resolver.Address{}, nil, errConnClosing
 		}
+		grpclog.Warningf("## grpc: addrConn.tryAllAddrs connectivity continues connect '%#v'", addr)
 
 		ac.cc.mu.RLock()
 		ac.dopts.copts.KeepaliveParams = ac.cc.mkp
@@ -1297,10 +1301,13 @@ func (ac *addrConn) createTransport(addr resolver.Address, copts transport.Conne
 		copts.ChannelzParentID = ac.channelzID
 	}
 
+	grpclog.Warningf("## grpc: addrConn.createTransport target: '%#v', copts: '%#v'", target, copts)
 	newTr, err := transport.NewClientTransport(connectCtx, ac.cc.ctx, target, copts, onPrefaceReceipt, onGoAway, onClose)
 	if err != nil {
 		// newTr is either nil, or closed.
 		grpclog.Warningf("grpc: addrConn.createTransport failed to connect to %v. Err :%v. Reconnecting...", addr, err)
+		grpclog.Warningf("grpc: addrConn.createTransport stack trace:\n", string(debug.Stack()))
+		// grpclog.Warningf("grpc: addrConn.createTransport addrConn: '%#v'\nClientConn: '%#v'", *ac, *(ac.cc))
 		return nil, nil, err
 	}
 
@@ -1424,7 +1431,9 @@ func (ac *addrConn) getReadyTransport() (transport.ClientTransport, bool) {
 	ac.mu.Unlock()
 	// Trigger idle ac to connect.
 	if idle {
+		grpclog.Warningf("## grpc: addrConn.getReadyTransport stack trace:\n", string(debug.Stack()))
 		ac.connect()
+		grpclog.Warningf("## grpc: addrConn.getReadyTransport ends, ac: '%#v'", *ac)
 	}
 	return nil, false
 }
