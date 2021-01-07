@@ -1238,23 +1238,13 @@ func (proxier *Proxier) syncProxyRules() {
 			}
 		}
 
-		// Capture nodeports.  If we had more than 2 rules it might be
-		// worthwhile to make a new per-service chain for nodeport rules, but
-		// with just 2 rules it ends up being a waste and a cognitive burden.
-		if svcInfo.NodePort() != 0 {
-			// Hold the local port open so no other process can open it
-			// (because the socket might open but it would never work).
-			if len(nodeAddresses) == 0 {
-				continue
-			}
-
-			lps := make([]utilproxy.LocalPort, 0)
+		getLocalPorts := func(proto, portType string, port int) (lps []utilproxy.LocalPort) {
 			for address := range nodeAddresses {
 				lp := utilproxy.LocalPort{
-					Description: "nodePort for " + svcNameString,
+					Description: fmt.Sprintf("%s for %s", portType, svcNameString),
 					IP:          address,
-					Port:        svcInfo.NodePort(),
-					Protocol:    protocol,
+					Port:        port,
+					Protocol:    proto,
 				}
 				if utilproxy.IsZeroCIDR(address) {
 					// Empty IP address means all
@@ -1265,6 +1255,20 @@ func (proxier *Proxier) syncProxyRules() {
 				}
 				lps = append(lps, lp)
 			}
+			return
+		}
+
+		// Capture nodeports.  If we had more than 2 rules it might be
+		// worthwhile to make a new per-service chain for nodeport rules, but
+		// with just 2 rules it ends up being a waste and a cognitive burden.
+		if svcInfo.NodePort() != 0 {
+			// Hold the local port open so no other process can open it
+			// (because the socket might open but it would never work).
+			if len(nodeAddresses) == 0 {
+				continue
+			}
+
+			lps := getLocalPorts(protocol, "nodePort", svcInfo.NodePort())
 
 			// For ports on node IPs, open the actual port and hold it.
 			for _, lp := range lps {
