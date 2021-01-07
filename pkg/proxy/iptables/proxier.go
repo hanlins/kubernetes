@@ -1332,6 +1332,36 @@ func (proxier *Proxier) syncProxyRules() {
 			}
 		}
 
+		// Capture healthCheckNodePorts.
+		if svcInfo.HealthCheckNodePort() != 0 {
+			lps := getLocalPorts("tcp", "healthCheckNodePort", svcInfo.HealthCheckNodePort())
+
+			// For ports on node IPs, open the actual port and hold it.
+			for _, lp := range lps {
+				if proxier.portsMap[lp] != nil {
+					klog.V(4).Infof("Port %s was open before and is still needed", lp.String())
+					replacementPortsMap[lp] = proxier.portsMap[lp]
+				} else if svcInfo.Protocol() != v1.ProtocolSCTP {
+					socket, err := proxier.portMapper.OpenLocalPort(&lp, isIPv6)
+					if err != nil {
+						klog.Errorf("can't open %s, skipping this nodePort: %v", lp.String(), err)
+						continue
+					}
+					replacementPortsMap[lp] = socket
+				}
+			}
+
+			// no matter if node has local endpoints, healthCheckEndpoints
+			// need to be exposed
+			writeLine(proxier.filterRules,
+				"-A", string(kubeExternalServicesChain),
+				"-m", "comment", "--comment", "healthCheckNodePort-"+svcNameString,
+				"-m", "tcp", "-p", "tcp",
+				"--dport", strconv.Itoa(svcInfo.HealthCheckNodePort()),
+				"-j", "ACCEPT",
+			)
+		}
+
 		if !hasEndpoints {
 			continue
 		}
