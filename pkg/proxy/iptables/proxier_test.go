@@ -913,6 +913,50 @@ func TestNodePort(t *testing.T) {
 	}
 }
 
+func TestHealthCheckNodePort(t *testing.T) {
+	ipt := iptablestest.NewFake()
+	fp := NewFakeProxier(ipt, false)
+	svcIP := "10.20.30.42"
+	svcPort := 80
+	svcNodePort := 3001
+	svcHealthCheckNodePort := 30000
+	svcPortName := proxy.ServicePortName{
+		NamespacedName: makeNSN("ns1", "svc1"),
+		Port:           "p80",
+		Protocol:       v1.ProtocolTCP,
+	}
+
+	makeServiceMap(fp,
+		makeTestService(svcPortName.Namespace, svcPortName.Name, func(svc *v1.Service) {
+			svc.Spec.Type = "LoadBalancer"
+			svc.Spec.ClusterIP = svcIP
+			svc.Spec.Ports = []v1.ServicePort{{
+				Name:     svcPortName.Port,
+				Port:     int32(svcPort),
+				Protocol: v1.ProtocolTCP,
+				NodePort: int32(svcNodePort),
+			}}
+			svc.Spec.HealthCheckNodePort = int32(svcHealthCheckNodePort)
+			svc.Spec.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyTypeLocal
+		}),
+	)
+
+	itf := net.Interface{Index: 0, MTU: 0, Name: "lo", HardwareAddr: nil, Flags: 0}
+	addrs := []net.Addr{utilproxytest.AddrStruct{Val: "127.0.0.1/16"}}
+	itf1 := net.Interface{Index: 1, MTU: 0, Name: "eth1", HardwareAddr: nil, Flags: 0}
+	addrs1 := []net.Addr{utilproxytest.AddrStruct{Val: "::1/128"}}
+	fp.networkInterfacer.(*utilproxytest.FakeNetwork).AddInterfaceAddr(&itf, addrs)
+	fp.networkInterfacer.(*utilproxytest.FakeNetwork).AddInterfaceAddr(&itf1, addrs1)
+	fp.nodePortAddresses = []string{"127.0.0.1/16"}
+
+	fp.syncProxyRules()
+
+	kubeExternalServicesRules := ipt.GetRules(string(kubeExternalServicesChain))
+	if !hasJump(kubeExternalServicesRules, iptablestest.Accept, "", svcHealthCheckNodePort) {
+		errorf(fmt.Sprintf("Failed to find Accept rule"), kubeExternalServicesRules, t)
+	}
+}
+
 func TestMasqueradeRule(t *testing.T) {
 	for _, testcase := range []bool{false, true} {
 		ipt := iptablestest.NewFake().SetHasRandomFully(testcase)
