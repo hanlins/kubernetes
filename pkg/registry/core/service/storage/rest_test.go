@@ -1129,9 +1129,10 @@ func TestServiceRegistryExternalService(t *testing.T) {
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:       6502,
 				Protocol:   api.ProtocolTCP,
@@ -1466,9 +1467,10 @@ func TestServiceRegistryDeleteExternal(t *testing.T) {
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:     6502,
 				Protocol: api.ProtocolTCP,
@@ -1508,6 +1510,7 @@ func TestServiceRegistryUpdateExternalService(t *testing.T) {
 	// Modify load balancer to be external.
 	svc2 := svc1.DeepCopy()
 	svc2.Spec.Type = api.ServiceTypeLoadBalancer
+	svc2.Spec.AllocateLoadBalancerNodePorts = utilpointer.BoolPtr(true)
 	if _, _, err := storage.Update(ctx, svc2.Name, rest.DefaultUpdatedObjectInfo(svc2), rest.ValidateAllObjectFunc, rest.ValidateAllObjectUpdateFunc, false, &metav1.UpdateOptions{}); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -1530,9 +1533,10 @@ func TestServiceRegistryUpdateMultiPortExternalService(t *testing.T) {
 	svc1 := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", ResourceVersion: "1"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Name:       "p",
 				Port:       6502,
@@ -2050,9 +2054,10 @@ func TestServiceRegistryIPLoadBalancer(t *testing.T) {
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", ResourceVersion: "1"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:       6502,
 				Protocol:   api.ProtocolTCP,
@@ -2111,9 +2116,10 @@ func TestServiceRegistryExternalTrafficHealthCheckNodePortAllocation(t *testing.
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "external-lb-esipp"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:       6502,
 				Protocol:   api.ProtocolTCP,
@@ -2150,9 +2156,10 @@ func TestServiceRegistryExternalTrafficHealthCheckNodePortUserAllocation(t *test
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "external-lb-esipp"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:       6502,
 				Protocol:   api.ProtocolTCP,
@@ -2223,9 +2230,10 @@ func TestServiceRegistryExternalTrafficGlobal(t *testing.T) {
 	svc := &api.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "external-lb-esipp"},
 		Spec: api.ServiceSpec{
-			Selector:        map[string]string{"bar": "baz"},
-			SessionAffinity: api.ServiceAffinityNone,
-			Type:            api.ServiceTypeLoadBalancer,
+			Selector:                      map[string]string{"bar": "baz"},
+			SessionAffinity:               api.ServiceAffinityNone,
+			Type:                          api.ServiceTypeLoadBalancer,
+			AllocateLoadBalancerNodePorts: utilpointer.BoolPtr(true),
 			Ports: []api.ServicePort{{
 				Port:       6502,
 				Protocol:   api.ProtocolTCP,
