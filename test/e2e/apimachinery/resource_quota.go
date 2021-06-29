@@ -31,7 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/util/feature"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/quota/v1/evaluator/core"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/utils/crd"
@@ -137,11 +139,14 @@ var _ = SIGDescribe("ResourceQuota", func() {
 
 	// TODO: convert the test to conformance test once the loadbalancer node port control feature is GAed
 	ginkgo.It("should create a ResourceQuota and capture the life of a load balancer type service with allocateLoadBalancerNodePorts.", func() {
+		if !feature.DefaultFeatureGate.Enabled(features.ServiceLBNodePortControl) {
+			ginkgo.Skip("Skip ServiceLBNodePortControl test if feature is not enabled")
+		}
 		ginkgo.By("Counting existing ResourceQuota")
 		c, err := countResourceQuota(f.ClientSet, f.Namespace.Name)
 		framework.ExpectNoError(err)
 		ginkgo.By("Creating a ResourceQuota")
-		quotaName := "test-quota"
+		quotaName := "test-quota-nodeport"
 		resourceQuota := newTestResourceQuota(quotaName)
 		resourceQuota.Spec.Hard[v1.ResourceServices] = resource.MustParse("4")
 		resourceQuota.Spec.Hard[v1.ResourceServicesNodePorts] = resource.MustParse("2")
@@ -174,11 +179,11 @@ var _ = SIGDescribe("ResourceQuota", func() {
 		_, err = f.ClientSet.CoreV1().Services(f.Namespace.Name).Create(context.TODO(), loadbalancer4, metav1.CreateOptions{})
 		framework.ExpectError(err)
 		ginkgo.By("Creating a Service")
-		service4 := newTestServiceForQuota("test-service", v1.ServiceTypeClusterIP, false)
+		service4 := newTestServiceForQuota("test-service4", v1.ServiceTypeClusterIP, false)
 		service4, err = f.ClientSet.CoreV1().Services(f.Namespace.Name).Create(context.TODO(), service4, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 		ginkgo.By("Not allowing creating fifth Service that exceed service quota")
-		service5 := newTestServiceForQuota("test-service2", v1.ServiceTypeClusterIP, false)
+		service5 := newTestServiceForQuota("test-service5", v1.ServiceTypeClusterIP, false)
 		_, err = f.ClientSet.CoreV1().Services(f.Namespace.Name).Create(context.TODO(), service5, metav1.CreateOptions{})
 		framework.ExpectError(err)
 		ginkgo.By("Ensuring resource quota status captures service creation")
@@ -200,6 +205,33 @@ var _ = SIGDescribe("ResourceQuota", func() {
 		framework.ExpectNoError(err)
 		err = f.ClientSet.CoreV1().Services(f.Namespace.Name).Delete(context.TODO(), service4.Name, metav1.DeleteOptions{})
 		framework.ExpectNoError(err)
+		// TODO: debug
+		time.Sleep(20 * time.Second)
+		svc1, err := f.ClientSet.CoreV1().Services(f.Namespace.Name).Get(context.TODO(), nodeport.Name, metav1.GetOptions{})
+		if err != nil {
+			framework.Logf("DEBUG: get svc %s error: %v", nodeport.Name, err)
+		} else {
+			framework.Logf("DEBUG: get service info %v", svc1)
+		}
+		svc2, err := f.ClientSet.CoreV1().Services(f.Namespace.Name).Get(context.TODO(), loadbalancer1.Name, metav1.GetOptions{})
+		if err != nil {
+			framework.Logf("DEBUG: get svc %s error: %v", nodeport.Name, err)
+		} else {
+			framework.Logf("DEBUG: get service info %v", svc2)
+		}
+		svc3, err := f.ClientSet.CoreV1().Services(f.Namespace.Name).Get(context.TODO(), loadbalancer3.Name, metav1.GetOptions{})
+		if err != nil {
+			framework.Logf("DEBUG: get svc %s error: %v", nodeport.Name, err)
+		} else {
+			framework.Logf("DEBUG: get service info %v", svc3)
+		}
+		svc4, err := f.ClientSet.CoreV1().Services(f.Namespace.Name).Get(context.TODO(), service4.Name, metav1.GetOptions{})
+		if err != nil {
+			framework.Logf("DEBUG: get svc %s error: %v", nodeport.Name, err)
+		} else {
+			framework.Logf("DEBUG: get service info %v", svc4)
+		}
+
 		ginkgo.By("Ensuring resource quota status released usage")
 		usedResources[v1.ResourceServices] = resource.MustParse("0")
 		usedResources[v1.ResourceServicesNodePorts] = resource.MustParse("0")
